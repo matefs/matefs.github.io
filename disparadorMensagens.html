@@ -1,1 +1,584 @@
-teste
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS - WhatsApp Sender</title>
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.0/font/bootstrap-icons.min.css"
+        rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #128C7E;
+            --secondary: #25D366;
+            --bg: #f4f7f6;
+            --dark: #075E54;
+        }
+
+        body {
+            background-color: var(--bg);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar {
+            background: linear-gradient(90deg, var(--dark), var(--primary));
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background-color: #fff;
+            border-bottom: 1px solid #eee;
+            border-radius: 12px 12px 0 0 !important;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .btn-whatsapp {
+            background-color: var(--secondary);
+            border: none;
+            color: white;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-whatsapp:hover {
+            background-color: var(--primary);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .contact-item {
+            transition: all 0.2s;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+
+        .contact-item:hover {
+            background-color: #f8f9fa;
+            border-color: var(--secondary);
+        }
+
+        .invalid-number {
+            border-color: #dc3545;
+            background-color: #fff8f8;
+        }
+
+        #imagePreview {
+            max-height: 200px;
+            border-radius: 8px;
+            display: none;
+            object-fit: cover;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .custom-file-upload {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .custom-file-upload:hover {
+            border-color: var(--secondary);
+            background-color: #f0fdf4;
+        }
+
+        .stat-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .btn-edit-contact {
+            background: none;
+            border: none;
+            padding: 2px 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-radius: 4px;
+        }
+
+        .btn-edit-contact:hover {
+            background-color: #e9ecef;
+            transform: scale(1.1);
+        }
+
+        .btn-edit-contact.text-warning {
+            animation: pulse-warn 2s infinite;
+        }
+
+        @keyframes pulse-warn {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-whatsapp"></i> ZapSaaS Pro
+            </a>
+            <span class="text-white opacity-75">Modo Offline (LocalStorage)</span>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <h3 id="totalContacts">0</h3>
+                    <span class="text-muted">Contatos na Base</span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <h3 id="validContacts" class="text-success">0</h3>
+                    <span class="text-muted">Números Válidos</span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <h3 id="invalidContacts" class="text-danger">0</h3>
+                    <span class="text-muted">Números Inválidos</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-5">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-person-plus"></i> Adicionar Contatos</span>
+                    </div>
+                    <div class="card-body">
+                        <ul class="nav nav-tabs mb-3" id="myTab" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="manual-tab" data-bs-toggle="tab"
+                                    data-bs-target="#manual" type="button">Manual</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="import-tab" data-bs-toggle="tab" data-bs-target="#import"
+                                    type="button">Importar Planilha</button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content" id="myTabContent">
+                            <div class="tab-pane fade show active" id="manual">
+                                <form id="contactForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">Nome</label>
+                                        <input type="text" class="form-control" id="contactName" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Número do WhatsApp</label>
+                                        <input type="tel" class="form-control" id="contactNumber"
+                                            placeholder="Ex: 5511999999999" required>
+                                        <small class="text-muted">Obrigatório DDI + DDD + Número</small>
+                                    </div>
+                                    <button type="submit" class="btn btn-whatsapp w-100">Adicionar à Base</button>
+                                </form>
+                            </div>
+
+                            <div class="tab-pane fade" id="import">
+                                <div class="custom-file-upload" onclick="document.getElementById('csvFile').click()">
+                                    <i class="bi bi-file-earmark-spreadsheet display-4 text-success"></i>
+                                    <p class="mt-2 mb-0">Clique para selecionar um arquivo CSV</p>
+                                    <small class="text-muted">Colunas esperadas: nome, numero</small>
+                                </div>
+                                <input type="file" id="csvFile" accept=".csv" style="display: none;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-chat-square-text"></i> Criar Campanha
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Anexar Imagem (Opcional)</label>
+                            <input class="form-control" type="file" id="messageImage" accept="image/*">
+                            <img id="imagePreview" src="" alt="Preview">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Mensagem de Texto</label>
+                            <textarea class="form-control" id="messageText" rows="5"
+                                placeholder="Digite sua mensagem. Use {nome} para personalizar."></textarea>
+                        </div>
+                        <button type="button" class="btn btn-whatsapp w-100 btn-lg" id="sendMessageBtn">
+                            <i class="bi bi-send-fill"></i> Disparar Mensagens
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-7">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-list-task"></i> Base de Contatos</span>
+                        <div>
+                            <button class="btn btn-sm btn-outline-warning" id="fixAllInvalidBtn"
+                                title="Corrigir todos os números inválidos"><i class="bi bi-pencil-square"></i> Corrigir
+                                Inválidos</button>
+                            <button class="btn btn-sm btn-outline-secondary" id="selectAllBtn">Selecionar Todos</button>
+                            <button class="btn btn-sm btn-outline-danger" id="clearAllBtn">Limpar Base</button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="p-3 bg-light border-bottom d-flex justify-content-between">
+                            <span id="selectedCount">0 selecionados</span>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="filterValidOnly">
+                                <label class="form-check-label" for="filterValidOnly">Apenas válidos</label>
+                            </div>
+                        </div>
+                        <div id="contactsList" class="p-3" style="max-height: 600px; overflow-y: auto;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        let contacts = [];
+        let currentImageBase64 = null;
+
+        function init() {
+            const saved = localStorage.getItem('saas_contacts');
+            if (saved) contacts = JSON.parse(saved);
+            updateUI();
+        }
+
+        function saveLocal() {
+            localStorage.setItem('saas_contacts', JSON.stringify(contacts));
+            updateUI();
+        }
+
+        function validatePhoneNumber(phone) {
+            const clean = phone.replace(/\D/g, '');
+            return clean.length >= 12 && clean.length <= 13 && clean.startsWith('55');
+        }
+
+        function formatPhoneNumber(phone) {
+            return phone.replace(/\D/g, '');
+        }
+
+        function updateUI() {
+            const validCount = contacts.filter(c => c.isValid).length;
+            $('#totalContacts').text(contacts.length);
+            $('#validContacts').text(validCount);
+            $('#invalidContacts').text(contacts.length - validCount);
+            renderContacts();
+        }
+
+        function renderContacts() {
+            const list = $('#contactsList');
+            const showOnlyValid = $('#filterValidOnly').is(':checked');
+            list.empty();
+
+            if (contacts.length === 0) {
+                list.html('<div class="text-center text-muted p-5">Nenhum contato na base.</div>');
+                updateSelectedCount();
+                return;
+            }
+
+            contacts.forEach((contact, index) => {
+                if (showOnlyValid && !contact.isValid) return;
+
+                const statusBadge = contact.isValid
+                    ? '<span class="badge bg-success">Válido</span>'
+                    : '<span class="badge bg-danger" title="Deve conter DDI e DDD">Inválido</span>';
+
+                const cardClass = contact.isValid ? '' : 'invalid-number';
+
+                list.append(`
+                    <div class="contact-item p-3 mb-2 d-flex align-items-center ${cardClass}">
+                        <input class="form-check-input me-3 contact-checkbox" type="checkbox" value="${index}" ${contact.isValid ? 'checked' : 'disabled'}>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0">${contact.name}</h6>
+                            <small class="text-muted">${contact.number}</small>
+                        </div>
+                        <div class="d-flex align-items-center gap-1">
+                            ${statusBadge}
+                            <button class="btn-edit-contact ${contact.isValid ? 'text-muted' : 'text-warning'}" onclick="editContact(${index})" title="Editar número"><i class="bi bi-pencil"></i></button>
+                            <button class="btn btn-sm text-danger border-0" onclick="deleteContact(${index})"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </div>
+                `);
+            });
+
+            $('.contact-checkbox').on('change', updateSelectedCount);
+            updateSelectedCount();
+        }
+
+        function updateSelectedCount() {
+            const count = $('.contact-checkbox:checked').length;
+            $('#selectedCount').text(`${count} selecionados`);
+        }
+
+        function addContact(name, number) {
+            const cleanNumber = formatPhoneNumber(number);
+            contacts.push({
+                name: name,
+                number: cleanNumber || number,
+                isValid: validatePhoneNumber(cleanNumber)
+            });
+            saveLocal();
+        }
+
+        window.deleteContact = function (index) {
+            contacts.splice(index, 1);
+            saveLocal();
+        }
+
+        window.editContact = function (index) {
+            const contact = contacts[index];
+            Swal.fire({
+                title: 'Editar Contato',
+                html:
+                    `<div class="text-start">` +
+                    `<label class="form-label fw-bold">Nome</label>` +
+                    `<input id="swal-name" class="swal2-input" style="width:100%;margin:0 0 12px 0" value="${contact.name}">` +
+                    `<label class="form-label fw-bold">Número <small class="text-muted">(DDI+DDD+Nº)</small></label>` +
+                    `<input id="swal-number" class="swal2-input" style="width:100%;margin:0" placeholder="5511999999999" value="${contact.number}">` +
+                    `<small class="text-muted">Ex: 5511999999999 (13 dígitos)</small>` +
+                    `</div>`,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: '<i class="bi bi-check-lg"></i> Salvar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#128C7E',
+                preConfirm: () => {
+                    const name = document.getElementById('swal-name').value.trim();
+                    const number = document.getElementById('swal-number').value.trim();
+                    if (!name || !number) {
+                        Swal.showValidationMessage('Preencha todos os campos');
+                        return false;
+                    }
+                    return { name, number };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const cleanNumber = formatPhoneNumber(result.value.number);
+                    contacts[index].name = result.value.name;
+                    contacts[index].number = cleanNumber || result.value.number;
+                    contacts[index].isValid = validatePhoneNumber(cleanNumber);
+                    saveLocal();
+                    const icon = contacts[index].isValid ? 'success' : 'warning';
+                    const msg = contacts[index].isValid ? 'Número corrigido e válido!' : 'Salvo, mas o número ainda é inválido.';
+                    Swal.fire({ toast: true, position: 'top-end', icon: icon, title: msg, showConfirmButton: false, timer: 2000 });
+                }
+            });
+        }
+
+        window.fixAllInvalid = async function () {
+            const invalidIndexes = contacts.map((c, i) => (!c.isValid ? i : -1)).filter(i => i !== -1);
+            if (invalidIndexes.length === 0) {
+                Swal.fire('Tudo certo!', 'Não há números inválidos para corrigir.', 'success');
+                return;
+            }
+
+            for (let i = 0; i < invalidIndexes.length; i++) {
+                const idx = invalidIndexes[i];
+                const contact = contacts[idx];
+                const result = await Swal.fire({
+                    title: `Corrigir (${i + 1}/${invalidIndexes.length})`,
+                    html:
+                        `<div class="text-start">` +
+                        `<p class="mb-2"><strong>${contact.name}</strong></p>` +
+                        `<label class="form-label fw-bold">Número atual: <span class="text-danger">${contact.number}</span></label>` +
+                        `<input id="swal-fix-number" class="swal2-input" style="width:100%;margin:4px 0 0 0" placeholder="5511999999999" value="${contact.number}">` +
+                        `<small class="text-muted">DDI(55) + DDD + Número</small>` +
+                        `</div>`,
+                    showCancelButton: true,
+                    showDenyButton: true,
+                    confirmButtonText: '<i class="bi bi-check-lg"></i> Salvar',
+                    denyButtonText: 'Pular',
+                    cancelButtonText: 'Parar',
+                    confirmButtonColor: '#128C7E',
+                    denyButtonColor: '#6c757d',
+                    focusConfirm: false,
+                    preConfirm: () => {
+                        const number = document.getElementById('swal-fix-number').value.trim();
+                        if (!number) {
+                            Swal.showValidationMessage('Digite um número');
+                            return false;
+                        }
+                        return { number };
+                    }
+                });
+
+                if (result.dismiss === Swal.DismissReason.cancel) break;
+                if (result.isConfirmed) {
+                    const cleanNumber = formatPhoneNumber(result.value.number);
+                    contacts[idx].number = cleanNumber || result.value.number;
+                    contacts[idx].isValid = validatePhoneNumber(cleanNumber);
+                    saveLocal();
+                }
+            }
+
+            const remaining = contacts.filter(c => !c.isValid).length;
+            if (remaining === 0) {
+                Swal.fire('Perfeito!', 'Todos os números estão válidos agora!', 'success');
+            } else {
+                Swal.fire('Concluído', `Ainda restam ${remaining} número(s) inválido(s).`, 'info');
+            }
+        }
+
+        $('#contactForm').on('submit', function (e) {
+            e.preventDefault();
+            addContact($('#contactName').val(), $('#contactNumber').val());
+            this.reset();
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Contato adicionado!', showConfirmButton: false, timer: 1500 });
+        });
+
+        $('#csvFile').on('change', function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function (results) {
+                    let imported = 0;
+                    results.data.forEach(row => {
+                        const name = row.nome || row.name || row.Nome || row.Name;
+                        const number = row.numero || row.number || row.telefone || row.Numero;
+                        if (name && number) {
+                            addContact(name, number);
+                            imported++;
+                        }
+                    });
+
+                    $('#csvFile').val('');
+                    Swal.fire('Sucesso!', `${imported} contatos importados.`, 'success');
+                },
+                error: function () {
+                    Swal.fire('Erro', 'Não foi possível ler o arquivo CSV. Verifique o formato.', 'error');
+                }
+            });
+        });
+
+        $('#messageImage').on('change', function (e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    currentImageBase64 = e.target.result;
+                    $('#imagePreview').attr('src', currentImageBase64).show();
+                }
+                reader.readAsDataURL(file);
+            } else {
+                currentImageBase64 = null;
+                $('#imagePreview').hide();
+            }
+        });
+
+        $('#selectAllBtn').click(() => {
+            $('.contact-checkbox:not(:disabled)').prop('checked', true);
+            updateSelectedCount();
+        });
+
+        $('#clearAllBtn').click(() => {
+            Swal.fire({
+                title: 'Tem certeza?',
+                text: "Você perderá toda a base de contatos atual!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sim, limpar!',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    contacts = [];
+                    saveLocal();
+                    Swal.fire('Limpou!', 'Sua base está vazia.', 'success');
+                }
+            });
+        });
+
+        $('#filterValidOnly').change(() => renderContacts());
+
+        $('#fixAllInvalidBtn').click(() => fixAllInvalid());
+
+        $('#sendMessageBtn').click(async function () {
+            const selectedIndexes = $('.contact-checkbox:checked').map(function () { return $(this).val(); }).get();
+            const textTemplate = $('#messageText').val().trim();
+
+            if (selectedIndexes.length === 0) {
+                Swal.fire('Aviso', 'Selecione pelo menos um contato válido.', 'warning');
+                return;
+            }
+            if (!textTemplate && !currentImageBase64) {
+                Swal.fire('Aviso', 'Adicione uma mensagem de texto ou uma imagem.', 'warning');
+                return;
+            }
+
+            Swal.fire({
+                title: 'Enviando Campanha...',
+                html: 'Progresso: <b>0</b>%',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            for (let i = 0; i < selectedIndexes.length; i++) {
+                const contact = contacts[selectedIndexes[i]];
+                const personalizedText = textTemplate.replace(/{nome}/gi, contact.name);
+
+                const payload = {
+                    number: contact.number,
+                    message: personalizedText,
+                    image: currentImageBase64
+                };
+
+                console.log('Enviando para o Backend:', payload);
+
+                await new Promise(r => setTimeout(r, 500));
+
+                const progress = Math.round(((i + 1) / selectedIndexes.length) * 100);
+                Swal.getHtmlContainer().querySelector('b').textContent = progress;
+            }
+
+            Swal.fire('Concluído!', `Mensagens processadas para ${selectedIndexes.length} contatos.`, 'success');
+        });
+
+        $(document).ready(init);
+
+    </script>
+</body>
+
+</html>
