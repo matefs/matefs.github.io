@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Curriculo</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    :root { --text: #000; --accent: #2563eb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 0; font-family: "Times New Roman", Times, serif; background: #f0f0f2; display: flex; }
+
+    /* Editor UI */
+    .editor-panel {
+      width: 450px; background: #121212; padding: 20px;
+      position: fixed; left: 0; top: 0; bottom: 0;
+      display: flex; flex-direction: column; z-index: 1000;
+      border-right: 1px solid #333;
+    }
+    .editor-wrapper {
+      position: relative; flex-grow: 1; overflow: hidden;
+      border-radius: 4px; background: #1e1e1e; margin-bottom: 15px;
+    }
+    #json-input, #highlight-layer {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      margin: 0; padding: 15px; font-family: 'Fira Code', monospace;
+      font-size: 11px; line-height: 1.4; white-space: pre;
+      overflow: auto; border: none; outline: none;
+      tab-size: 2;
+      letter-spacing: 0;
+      font-variant-ligatures: none;
+    }
+    #json-input { color: transparent; background: transparent; caret-color: #00ff41; z-index: 2; resize: none; }
+    #highlight-layer { z-index: 1; pointer-events: none; }
+    #highlight-layer, #highlight-layer code {
+      font-family: 'Fira Code', monospace !important;
+      font-size: 11px !important;
+      line-height: 1.4 !important;
+      white-space: pre !important;
+      margin: 0 !important;
+      tab-size: 2 !important;
+      letter-spacing: 0 !important;
+      font-variant-ligatures: none !important;
+    }
+    #highlight-content {
+      display: block;
+      min-height: 100%;
+    }
+
+    /* Action Button */
+    .print-btn {
+      background: var(--accent); color: white; border: none; padding: 14px;
+      border-radius: 6px; font-family: sans-serif; font-weight: bold;
+      cursor: pointer; transition: opacity 0.2s; text-transform: uppercase;
+      letter-spacing: 1px; font-size: 12px;
+    }
+    .print-btn:hover { opacity: 0.9; }
+
+    /* Harvard Template Core */
+    .preview-container { margin-left: 450px; flex-grow: 1; padding: 50px; display: flex; justify-content: center; }
+    .page { 
+      width: 210mm; min-height: 297mm; background: #fff; padding: 40px 60px;
+      color: var(--text); box-shadow: 0 0 20px rgba(0,0,0,0.05);
+    }
+
+    /* Header Harvard */
+    .h-header { text-align: center; margin-bottom: 15px; }
+    .h-name { font-size: 18pt; font-weight: bold; text-transform: uppercase; margin: 0 0 5px 0; }
+    .h-contact { font-size: 10pt; margin: 0; line-height: 1.4; }
+    .h-contact a { color: #000; text-decoration: none; }
+
+    h2 { 
+      font-size: 11pt; font-weight: bold; text-transform: uppercase; 
+      border-bottom: 1px solid #000; margin: 15px 0 8px 0; padding-bottom: 1px;
+      break-after: auto; page-break-after: auto;
+    }
+    .summary-text { font-size: 10.5pt; text-align: justify; margin: 0; line-height: 1.3; }
+
+    .entry { margin-bottom: 12px; }
+    .entry-row-1 { display: flex; justify-content: space-between; font-weight: bold; font-size: 11pt; }
+    .entry-row-2 { display: flex; justify-content: space-between; font-style: italic; font-size: 10.5pt; margin-bottom: 3px; }
+    
+    ul { margin: 2px 0 0 22px; padding: 0; }
+    li { font-size: 10.5pt; margin-bottom: 2px; list-style-type: disc; text-align: justify; }
+
+    .skills-box { width: 100%; font-size: 10.5pt; margin-top: 5px; line-height: 1.4; }
+    .links-list { margin-top: 4px; }
+    .links-item { margin-bottom: 6px; font-size: 10pt; line-height: 1.35; }
+    .links-item a { color: #000; text-decoration: underline; font-weight: bold; }
+    .links-meta { font-style: italic; }
+    .links-desc { margin: 2px 0 0 0; }
+    .links-item { break-inside: avoid; page-break-inside: avoid; }
+
+    /* Compact spacing only while exporting to PDF */
+    .pdf-export .page {
+      padding: 20px 45px 30px;
+    }
+    .pdf-export .h-header {
+      margin-bottom: 10px;
+    }
+    .pdf-export h2 {
+      margin-top: 12px;
+    }
+
+    @page {
+      size: A4;
+      margin: 10mm;
+    }
+
+    @media print {
+      body { background: white; }
+      .editor-panel { display: none !important; }
+      .preview-container { margin: 0; padding: 0; display: block; }
+      .page { box-shadow: none; width: 100%; height: auto; padding: 0; margin: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app" style="display: flex; width: 100%;">
+    <div class="editor-panel">
+      <div style="color: #888; font-family: monospace; font-size: 10px; margin-bottom: 10px; letter-spacing: 2px;">CV CONFIGURATOR</div>
+      <div class="editor-wrapper">
+        <pre id="highlight-layer" class="language-json"><code id="highlight-content"></code></pre>
+        <textarea 
+          id="json-input" 
+          v-model="jsonString" 
+          @input="handleInput" 
+          @scroll="syncScroll"
+          spellcheck="false"
+        ></textarea>
+      </div>
+      <button class="print-btn" @click="imprimir">Baixar PDF</button>
+    </div>
+
+    <div class="preview-container">
+      <div class="page">
+        <header class="h-header">
+          <h1 class="h-name">{{ resume.name }}</h1>
+          <p class="h-contact">
+            {{ resume.location }} | {{ resume.phone }} <br>
+            <template v-for="(c, i) in resume.links">
+              <a :href="c.url">{{ c.label }}</a>
+              <span v-if="i < resume.links.length - 1"> | </span>
+            </template>
+          </p>
+        </header>
+
+        <h2>Professional Summary</h2>
+        <p class="summary-text" v-html="resume.summary"></p>
+
+        <h2>Experience</h2>
+        <div v-for="exp in resume.experiences" class="entry">
+          <div class="entry-row-1">
+            <span>{{ exp.company }}</span>
+            <span>{{ exp.location }}</span>
+          </div>
+          <div class="entry-row-2">
+            <span>{{ exp.role }}</span>
+            <span>{{ exp.period }}</span>
+          </div>
+          <ul>
+            <li v-for="bullet in exp.bullets" v-html="bullet"></li>
+          </ul>
+        </div>
+
+        <h2>Technical Skills</h2>
+        <div class="skills-box">
+          <div v-for="s in resume.skills">
+            <b style="text-transform: capitalize;">{{ s.category }}:</b> {{ s.items }}
+          </div>
+        </div>
+
+        <template v-if="additionalLinks.length">
+          <h2>Articles & Live Systems</h2>
+          <div class="links-list">
+            <div class="links-item" v-for="item in additionalLinks">
+              <div>
+                <a :href="item.url" target="_blank" rel="noopener noreferrer">{{ item.label }}</a>
+                <span class="links-meta" v-if="item.type"> ({{ item.type }})</span>
+              </div>
+              <p class="links-desc" v-if="item.description">{{ item.description }}</p>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { createApp } = Vue;
+    const defaultData = {
+      name: "Mateus Schverz",
+      location: "Florianópolis, SC",
+      phone: "+55 49 93300-4644",
+      links: [
+        {
+          label: "matefs8569@gmail.com",
+          url: "mailto:matefs8569@gmail.com"
+        },
+        {
+          label: "LinkedIn",
+          url: "https://linkedin.com/in/mateusschverz"
+        },
+        {
+          label: "GitHub",
+          url: "https://github.com/matefs"
+        }
+      ],
+      summary: "Software Engineer focado em automação de processos e integrações escaláveis. Experiência prática com <b>n8n</b>, APIs REST e arquiteturas orientadas a eventos, incluindo implementação de soluções com IA (RAG) integradas a pipelines automatizados. Forte atuação com PostgreSQL, Redis e mensageria (RabbitMQ/Kafka) para construção de fluxos resilientes e de alta performance.",
+      experiences: [
+        {
+          company: "Raster (Projeto Logae)",
+          location: "Florianópolis, SC",
+          role: "Software Engineer Backend",
+          period: "2022 – Present",
+          bullets: [
+            "Desenvolvimento de fluxos automatizados com n8n integrando múltiplos serviços via APIs REST e webhooks.",
+            "Implementação de soluções de IA com RAG (Retrieval-Augmented Generation) integradas a pipelines automatizados para enriquecimento de dados e automação de decisões.",
+            "Construção de pipelines assíncronos com RabbitMQ garantindo idempotência e resiliência.",
+            "Migração de partes de sistemas monolíticos para arquiteturas desacopladas, com foco em automação e comunicação via eventos.",
+            "Implementação de estratégias de deduplicação de dados em PostgreSQL utilizando chaves compostas e controle de idempotência, evitando reprocessamento em sistemas distribuídos.",
+            "Criação de triggers e rotinas no PostgreSQL para garantir consistência de dados e automação de processos no nível do banco.",
+            "Otimização de queries complexas em PostgreSQL/MySQL com redução de até 45% no tempo de resposta.",
+            "Implementação de paginação eficiente (cursor-based e offset) para melhoria de performance em consultas de alto volume.",
+            "Desenvolvimento de relatórios analíticos e operacionais com foco em performance e leitura eficiente de grandes volumes de dados.",
+            "Integração e orquestração de serviços com foco em alta disponibilidade, tolerância a falhas e reprocessamento seguro de eventos."
+          ]
+        },
+        {
+          company: "Raster",
+          location: "Remote",
+          role: "Software Engineer Junior",
+          period: "2020 – 2022",
+          bullets: [
+            "Migração de sistemas monolíticos para microservices com foco em automação e desacoplamento.",
+            "Implementação de consumidores de alto volume (>100k mensagens/dia) com processamento assíncrono.",
+            "Integração entre sistemas via APIs REST e mensageria."
+          ]
+        }
+      ],
+      skills: [
+        {
+          category: "Automação & Integração",
+          items: "n8n, APIs REST, Webhooks, Event-driven architecture"
+        },
+        {
+          category: "Banco de Dados & Cache",
+          items: "PostgreSQL, Redis, SQL Optimization"
+        },
+        {
+          category: "Mensageria",
+          items: "RabbitMQ, Kafka"
+        },
+        {
+          category: "Infraestrutura",
+          items: "Docker, Kubernetes, CI/CD"
+        },
+        {
+          category: "Linguagens",
+          items: "Java, Kotlin, Python, TypeScript"
+        }
+      ],
+      featuredLinks: []
+    };
+
+    createApp({
+      data() {
+        const stored = localStorage.getItem('cv_harvard_engine_v4');
+        const initialRaw = stored ? JSON.parse(stored) : defaultData;
+        const initial = this.normalizeResume(initialRaw);
+        return {
+          resume: initial,
+          jsonString: JSON.stringify(initial, null, 2)
+        }
+      },
+      computed: {
+        additionalLinks() {
+          const source =
+            this.resume?.featuredLinks ||
+            this.resume?.projectLinks ||
+            this.resume?.articleLinks ||
+            [];
+
+          if (!Array.isArray(source)) return [];
+
+          return source.filter(item => item && item.label && item.url);
+        }
+      },
+      mounted() { this.highlight(); },
+      methods: {
+        normalizeResume(data) {
+          if (!data || typeof data !== 'object') return data;
+          const normalized = { ...data };
+
+          // Remove placeholders antigos que podem ficar presos no localStorage.
+          if (Array.isArray(normalized.featuredLinks)) {
+            normalized.featuredLinks = normalized.featuredLinks.filter(item => {
+              if (!item || !item.url) return false;
+              return !/seu-link-aqui\.com/i.test(item.url);
+            });
+          }
+
+          return normalized;
+        },
+        handleInput() {
+          this.highlight();
+          try {
+            const parsed = this.normalizeResume(JSON.parse(this.jsonString));
+            this.resume = parsed;
+            localStorage.setItem('cv_harvard_engine_v4', JSON.stringify(parsed));
+          } catch (e) {}
+        },
+        highlight() {
+          const html = Prism.highlight(this.jsonString, Prism.languages.json, 'json');
+          document.getElementById('highlight-content').innerHTML = html + "\n";
+        },
+        syncScroll(e) {
+          const layer = document.getElementById('highlight-layer');
+          layer.scrollTop = e.target.scrollTop;
+          layer.scrollLeft = e.target.scrollLeft;
+        },
+        imprimir() {
+          const element = document.querySelector('.page');
+          const safeName = (this.resume?.name || 'Curriculo')
+            .replace(/[^a-z0-9\s-_]/gi, '')
+            .trim()
+            .replace(/\s+/g, '_');
+
+          const exportWrapper = document.createElement('div');
+          exportWrapper.style.position = 'absolute';
+          exportWrapper.style.left = '0';
+          exportWrapper.style.top = '0';
+          exportWrapper.style.width = '210mm';
+          exportWrapper.style.height = 'auto';
+          exportWrapper.style.overflow = 'visible';
+          exportWrapper.style.background = '#fff';
+          exportWrapper.style.opacity = '0';
+          exportWrapper.style.pointerEvents = 'none';
+          exportWrapper.style.zIndex = '-1';
+
+          const exportNode = element.cloneNode(true);
+          exportNode.style.width = '210mm';
+          exportNode.style.boxSizing = 'border-box';
+          exportNode.style.minHeight = 'auto';
+          exportNode.style.height = 'auto';
+          exportNode.style.margin = '0';
+          exportNode.style.boxShadow = 'none';
+
+          exportWrapper.appendChild(exportNode);
+          document.body.appendChild(exportWrapper);
+          document.body.classList.add('pdf-export');
+
+          const options = {
+            margin: [0, 0, 0, 0],
+            filename: `${safeName || 'Curriculo'}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: {
+              scale: 2,
+              useCORS: true,
+              scrollX: 0,
+              scrollY: 0
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['css', 'legacy'] }
+          };
+
+          html2pdf()
+            .set(options)
+            .from(exportNode)
+            .save()
+            .finally(() => {
+              document.body.classList.remove('pdf-export');
+              if (exportWrapper.parentNode) {
+                exportWrapper.parentNode.removeChild(exportWrapper);
+              }
+            });
+        }
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
